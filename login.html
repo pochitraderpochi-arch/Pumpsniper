@@ -18,8 +18,12 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 @keyframes up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 .back{position:absolute;top:18px;left:18px;font-size:11px;color:var(--muted);text-decoration:none;transition:color 0.2s}
 .back:hover{color:var(--text)}
-.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;text-align:center;margin-bottom:28px}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;text-align:center;margin-bottom:20px}
 .logo span{color:var(--accent)}
+.beta-badge{text-align:center;margin-bottom:20px;padding:16px;background:rgba(200,255,0,0.04);border:1px solid rgba(200,255,0,0.15);border-radius:12px}
+.beta-tag{display:inline-block;background:rgba(200,255,0,0.1);border:1px solid rgba(200,255,0,0.3);border-radius:999px;padding:5px 16px;font-size:11px;letter-spacing:2px;color:#c8ff00;font-family:'DM Mono',monospace}
+.beta-text{margin-top:10px;font-size:11px;color:#4a4a6a;line-height:1.7}
+.beta-text strong{color:#f0f0ff}
 .tabs{display:flex;background:var(--surface);border-radius:10px;padding:4px;margin-bottom:24px}
 .tab{flex:1;text-align:center;padding:9px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);transition:all 0.2s}
 .tab.active{background:var(--card);color:var(--accent);border:1px solid rgba(200,255,0,0.2)}
@@ -53,6 +57,10 @@ input::placeholder{color:var(--muted)}
 <div class="panel">
   <a href="index.html" class="back">← Back</a>
   <div class="logo">PUMP<span>SNIPER</span></div>
+  <div class="beta-badge">
+    <span class="beta-tag">🚀 BETA — Early Access</span>
+    <p class="beta-text">You are registering for early access.<br>Bot launches <strong>Q1 2026</strong> — <strong>50% off</strong> for early members.</p>
+  </div>
   <div class="tabs">
     <div class="tab active" onclick="switchTab('login')">Login</div>
     <div class="tab" onclick="switchTab('register')">Register</div>
