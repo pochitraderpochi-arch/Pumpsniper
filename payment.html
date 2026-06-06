@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PumpSniper — Payment</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#03030a;--surface:#08080f;--card:#0c0c15;--border:#16162a;
+  --accent:#c8ff00;--red:#ff4d6d;--blue:#00d4ff;--yellow:#ffe066;
+  --text:#f0f0ff;--muted:#4a4a6a;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,255,0,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(200,255,0,0.02) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+.layout{display:grid;grid-template-columns:1fr 380px;gap:20px;max-width:860px;width:100%;position:relative;z-index:1}
+@media(max-width:700px){.layout{grid-template-columns:1fr}}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);text-decoration:none;margin-bottom:20px;transition:color 0.2s}
+.back:hover{color:var(--text)}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;margin-bottom:28px}
+.logo span{color:var(--accent)}
+.section-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px}
+/* Steps */
+.steps{display:flex;gap:8px;margin-bottom:28px}
+.step{flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);text-align:center;font-size:10px;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted)}
+.step.active{border-color:var(--accent);color:var(--accent);background:rgba(200,255,0,0.05)}
+.step.done{border-color:rgba(200,255,0,0.3);color:rgba(200,255,0,0.5)}
+/* Plan tabs */
+.plan-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:24px}
+.plan-tab{border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center;cursor:pointer;transition:all 0.2s}
+.plan-tab.active{border-color:var(--accent);background:rgba(200,255,0,0.06)}
+.plan-tab-name{font-family:'Syne',sans-serif;font-size:11px;font-weight:800;margin-bottom:4px}
+.plan-tab-price{font-size:16px;color:var(--accent);font-weight:700}
+.plan-tab-sol{font-size:10px;color:var(--muted);margin-top:2px}
+/* Address box */
+.address-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:20px;margin-bottom:16px;
+}
+.address-label{font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+.address-val{
+  font-size:11px;color:var(--accent);word-break:break-all;
+  cursor:pointer;padding:12px;background:rgba(200,255,0,0.04);
+  border:1px solid rgba(200,255,0,0.15);border-radius:8px;
+  transition:border-color 0.2s;line-height:1.6;
+}
+.address-val:hover{border-color:rgba(200,255,0,0.4)}
+.copy-hint{font-size:10px;color:var(--muted);text-align:center;margin-top:6px}
+.amount-big{text-align:center;margin:20px 0}
+.amount-val{font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:var(--accent)}
+.amount-usd{font-size:12px;color:var(--muted);margin-top:4px}
+.warning{background:rgba(255,224,102,0.06);border:1px solid rgba(255,224,102,0.2);border-radius:8px;padding:12px;font-size:11px;color:rgba(255,224,102,0.8);line-height:1.6;margin-bottom:16px}
+/* Verify section */
+.verify-box{margin-top:20px}
+label{display:block;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none;transition:border-color 0.2s}
+input:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted)}
+.btn{width:100%;margin-top:14px;padding:13px;border-radius:9px;border:none;background:var(--accent);color:#000;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
+.btn:hover{background:#d4ff1a;transform:translateY(-1px)}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.msg{border-radius:8px;padding:10px 13px;font-size:11px;margin-top:12px;display:none;line-height:1.5}
+.msg.err{background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);color:var(--red)}
+.msg.ok{background:rgba(200,255,0,0.08);border:1px solid rgba(200,255,0,0.25);color:var(--accent)}
+/* Order card */
+.order-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;height:fit-content;position:sticky;top:20px}
+.order-title{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+.order-plan{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--accent);margin-bottom:4px}
+.order-price{font-size:14px;color:var(--muted);margin-bottom:20px}
+.order-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.order-features li{font-size:11px;display:flex;align-items:flex-start;gap:8px;color:var(--muted);line-height:1.4}
+.order-features li::before{content:'✓';color:var(--accent);font-weight:700;flex-shrink:0}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.total-row{display:flex;justify-content:space-between;align-items:center}
+.total-label{font-size:11px;color:var(--muted)}
+.total-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--accent)}
+.guarantee{margin-top:16px;padding:12px;background:rgba(200,255,0,0.04);border:1px solid rgba(200,255,0,0.1);border-radius:8px;font-size:10px;color:var(--muted);line-height:1.7}
+/* Overlay */
+.overlay{position:fixed;inset:0;background:rgba(3,3,10,0.96);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
+.overlay.show{display:flex}
+.spinner{width:48px;height:48px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700}
+.overlay-sub{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <div>
+    <a href="login.html" class="back">← Back</a>
+    <div class="logo">PUMP<span>SNIPER</span></div>
+
+    <div class="steps">
+      <div class="step done">1. Account</div>
+      <div class="step active">2. Payment</div>
+      <div class="step">3. Access</div>
+    </div>
+
+    <div class="section-title">Choose your plan</div>
+    <div class="plan-tabs">
+      <div class="plan-tab" onclick="setPlan('starter',this)">
+        <div class="plan-tab-name">STARTER</div>
+        <div class="plan-tab-price">$49</div>
+        <div class="plan-tab-sol" id="sol-starter">— SOL</div>
+      </div>
+      <div class="plan-tab active" onclick="setPlan('pro',this)">
+        <div class="plan-tab-name">PRO</div>
+        <div class="plan-tab-price">$149</div>
+        <div class="plan-tab-sol" id="sol-pro">— SOL</div>
+      </div>
+      <div class="plan-tab" onclick="setPlan('elite',this)">
+        <div class="plan-tab-name">ELITE</div>
+        <div class="plan-tab-price">$349</div>
+        <div class="plan-tab-sol" id="sol-elite">— SOL</div>
+      </div>
+    </div>
+
+    <div class="section-title">Send payment</div>
+
+    <div class="address-box">
+      <div class="address-label">Send SOL to this address</div>
+      <div class="address-val" onclick="copyAddr(this)" id="pay-address">
+        AC9pbzBdSfKeBkCajddngHAAadUctA5PYmznopTghiJi
+      </div>
+      <div class="copy-hint">Tap to copy</div>
+    </div>
+
+    <div class="amount-big">
+      <div class="amount-val" id="amount-display">— SOL</div>
+      <div class="amount-usd" id="amount-usd">Loading price...</div>
+    </div>
+
+    <div class="warning">
+      ⚠️ Send the <strong>exact amount</strong> shown above. After sending, paste your transaction signature below to verify.
+    </div>
+
+    <div class="verify-box">
+      <label>Transaction Signature (TX Hash)</label>
+      <input type="text" id="tx-input" placeholder="Paste your Solana transaction signature here...">
+      <div class="msg err" id="pay-err"></div>
+      <div class="msg ok" id="pay-ok"></div>
+      <button class="btn" id="verify-btn" onclick="verifyPayment()">Verify Payment →</button>
+    </div>
+  </div>
+
+  <!-- Order Summary -->
+  <div class="order-card">
+    <div class="order-title">Order Summary</div>
+    <div class="order-plan" id="sum-plan">PRO</div>
+    <div class="order-price">One-time · Lifetime access</div>
+    <ul class="order-features" id="sum-features">
+      <li>Unlimited keywords</li>
+      <li>10-second scan interval</li>
+      <li>3 Solana wallets</li>
+      <li>Custom token templates</li>
+      <li>Priority detection</li>
+      <li>Priority support</li>
+      <li>Lifetime updates</li>
+    </ul>
+    <div class="divider"></div>
+    <div class="total-row">
+      <div class="total-label">Total</div>
+      <div class="total-val" id="sum-price">$149</div>
+    </div>
+    <div class="guarantee">
+      ✓ Instant access after payment<br>
+      ✓ 14-day money-back guarantee<br>
+      ✓ Lifetime updates included<br>
+      ✓ Non-custodial — your keys
+    </div>
+  </div>
+</div>
+
+<!-- Processing overlay -->
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="overlay-title" id="overlay-title">Verifying payment...</div>
+  <div class="overlay-sub" id="overlay-sub">Checking Solana blockchain</div>
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://zplvcxhbqstbnsamavgf.supabase.co';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const RECEIVE_WALLET = 'AC9pbzBdSfKeBkCajddngHAAadUctA5PYmznopTghiJi';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PLANS = {
+  starter: { name:'STARTER', usd:49, features:['5 keywords','30-sec interval','1 wallet','Basic templates','Email support','Lifetime access'] },
+  pro:     { name:'PRO',     usd:149,features:['Unlimited keywords','10-sec interval','3 wallets','Custom templates','Priority detection','Priority support','Lifetime access'] },
+  elite:   { name:'ELITE',  usd:349,features:['Unlimited keywords','5-sec interval','10 wallets','Custom templates','Priority detection','Multi-wallet','REST API','Dedicated support','Lifetime access'] },
+};
+
+let solPrice = 0;
+let currentPlan = 'pro';
+
+// Read plan from URL
+const urlPlan = new URLSearchParams(location.search).get('plan');
+if (urlPlan && PLANS[urlPlan]) {
+  currentPlan = urlPlan;
+  document.querySelectorAll('.plan-tab').forEach((t,i)=>{
+    t.classList.toggle('active',['starter','pro','elite'][i]===currentPlan);
+  });
+}
+
+// Fetch SOL price
+async function fetchSolPrice() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+    const d = await r.json();
+    solPrice = d.solana.usd;
+    updateAmounts();
+  } catch {
+    solPrice = 150; // fallback
+    updateAmounts();
+  }
+}
+
+function solAmount(usd) {
+  if (!solPrice) return '—';
+  return (usd / solPrice).toFixed(3);
+}
+
+function updateAmounts() {
+  ['starter','pro','elite'].forEach(p => {
+    document.getElementById('sol-'+p).textContent = solAmount(PLANS[p].usd) + ' SOL';
+  });
+  const plan = PLANS[currentPlan];
+  const sol = solAmount(plan.usd);
+  document.getElementById('amount-display').textContent = sol + ' SOL';
+  document.getElementById('amount-usd').textContent = '≈ $' + plan.usd + ' USD at current rate';
+  document.getElementById('sum-plan').textContent = plan.name;
+  document.getElementById('sum-price').textContent = '$' + plan.usd;
+  document.getElementById('sum-features').innerHTML = plan.features.map(f=>`<li>${f}</li>`).join('');
+}
+
+function setPlan(plan, el) {
+  currentPlan = plan;
+  document.querySelectorAll('.plan-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  updateAmounts();
+}
+
+function copyAddr(el) {
+  navigator.clipboard.writeText(RECEIVE_WALLET).catch(()=>{});
+  el.textContent = '✓ Copied! ' + RECEIVE_WALLET;
+  setTimeout(()=>el.textContent=RECEIVE_WALLET, 2500);
+}
+
+async function verifyPayment() {
+  const tx = document.getElementById('tx-input').value.trim();
+  const err = document.getElementById('pay-err');
+  const ok  = document.getElementById('pay-ok');
+  const btn = document.getElementById('verify-btn');
+  const user = JSON.parse(localStorage.getItem('ps_user') || '{}');
+
+  if (!tx || tx.length < 40) {
+    err.textContent = 'Please enter a valid transaction signature.';
+    err.style.display = 'block'; return;
+  }
+  if (!user.email) {
+    err.textContent = 'Session expired. Please login again.';
+    err.style.display = 'block'; return;
+  }
+
+  btn.disabled = true;
+  document.getElementById('overlay').classList.add('show');
+
+  try {
+    // Verify tx on Solana mainnet
+    const rpc = 'https://api.mainnet-beta.solana.com';
+    const body = JSON.stringify({
+      jsonrpc:'2.0', id:1,
+      method:'getTransaction',
+      params:[tx, { encoding:'jsonParsed', commitment:'confirmed' }]
+    });
+    const res = await fetch(rpc, { method:'POST', headers:{'Content-Type':'application/json'}, body });
+    const data = await res.json();
+    const txData = data.result;
+
+    if (!txData) throw new Error('Transaction not found. Wait a moment and try again.');
+
+    // Check receiver got paid
+    const expectedSol = parseFloat(solAmount(PLANS[currentPlan].usd));
+    const accountKeys = txData.transaction?.message?.accountKeys || [];
+    const receiverIdx = accountKeys.findIndex(k => (k.pubkey || k) === RECEIVE_WALLET);
+
+    if (receiverIdx === -1) throw new Error('Payment not sent to correct address.');
+
+    const preBalance  = txData.meta?.preBalances?.[receiverIdx] || 0;
+    const postBalance = txData.meta?.postBalances?.[receiverIdx] || 0;
+    const received = (postBalance - preBalance) / 1e9;
+
+    if (received < expectedSol * 0.95) {
+      throw new Error(`Amount mismatch. Expected ~${expectedSol} SOL, received ${received.toFixed(4)} SOL.`);
+    }
+
+    // ✅ Payment verified — update database
+    await sb.from('users').upsert({
+      email: user.email,
+      plan: currentPlan,
+      paid: true,
+    }, { onConflict: 'email' });
+
+    await sb.from('payments').insert({
+      user_email: user.email,
+      plan: currentPlan,
+      amount_sol: received,
+      tx_signature: tx,
+      confirmed: true,
+    });
+
+    // Update localStorage
+    user.paid = true; user.plan = currentPlan;
+    localStorage.setItem('ps_user', JSON.stringify(user));
+
+    document.getElementById('overlay-title').textContent = '✓ Payment Confirmed!';
+    document.getElementById('overlay-sub').textContent = 'Setting up your account...';
+
+    setTimeout(() => window.location.href = 'dashboard.html', 2000);
+
+  } catch(e) {
+    document.getElementById('overlay').classList.remove('show');
+    err.textContent = e.message;
+    err.style.display = 'block';
+    ok.style.display = 'none';
+    btn.disabled = false;
+  }
+}
+
+fetchSolPrice();
+</script>
+</body>
+</html>

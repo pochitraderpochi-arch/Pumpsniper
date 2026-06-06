@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PumpSniper — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#03030a;--surface:#06060e;--card:#0a0a12;--border:#14142a;
+  --accent:#c8ff00;--accent2:#ff4d6d;--accent3:#00d4ff;
+  --text:#f0f0ff;--muted:#484868;--muted2:#222235;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh}
+
+/* Sidebar */
+.sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:220px;
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:50;
+  transition:transform 0.3s;
+}
+.sidebar-logo{
+  padding:24px 20px 20px;border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-weight:800;font-size:17px;
+}
+.sidebar-logo span{color:var(--accent)}
+.sidebar-logo .plan-tag{
+  font-size:9px;letter-spacing:1px;color:var(--accent);
+  background:rgba(200,255,0,0.1);border:1px solid rgba(200,255,0,0.2);
+  padding:2px 8px;border-radius:99px;margin-top:4px;display:inline-block;
+  font-family:'DM Mono',monospace;
+}
+.nav-section{
+  font-size:9px;letter-spacing:2px;color:var(--muted);
+  padding:16px 20px 6px;text-transform:uppercase;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 20px;cursor:pointer;font-size:12px;color:var(--muted);
+  transition:all 0.2s;border-left:2px solid transparent;
+  text-decoration:none;
+}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.02)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(200,255,0,0.04)}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-bottom{
+  margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);
+}
+.user-row{display:flex;align-items:center;gap:10px}
+.user-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),#7fff00);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#000;
+}
+.user-name{font-size:12px;font-weight:700}
+.user-plan{font-size:10px;color:var(--muted)}
+.logout-btn{
+  margin-top:10px;font-size:11px;color:var(--muted);cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+  transition:color 0.2s;background:none;border:none;padding:0;
+  font-family:'DM Mono',monospace;
+}
+.logout-btn:hover{color:var(--accent2)}
+
+/* Main */
+.main{margin-left:220px;min-height:100vh;display:flex;flex-direction:column}
+.topbar{
+  padding:16px 28px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);
+}
+.topbar-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700}
+.status-pill{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:99px;font-size:11px;
+  background:rgba(200,255,0,0.08);border:1px solid rgba(200,255,0,0.2);
+  color:var(--accent);cursor:pointer;transition:all 0.2s;
+}
+.status-pill.offline{background:rgba(255,77,109,0.08);border-color:rgba(255,77,109,0.2);color:var(--accent2)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 1.4s infinite}
+.status-dot.off{background:var(--accent2);animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.content{padding:24px 28px;flex:1}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat-tile{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:18px 20px;
+}
+.stat-val{
+  font-family:'Syne',sans-serif;font-size:28px;font-weight:800;
+  line-height:1;margin-bottom:6px;
+}
+.stat-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.stat-change{font-size:10px;margin-top:4px}
+.up{color:var(--accent)}.dn{color:var(--accent2)}.nu{color:var(--muted)}
+
+/* Grid layout */
+.dash-grid{display:grid;grid-template-columns:1fr 340px;gap:16px}
+@media(max-width:1100px){.dash-grid{grid-template-columns:1fr}}
+
+/* Card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px}
+.card-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-title{
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--muted);
+}
+
+/* Log */
+.log-list{
+  padding:12px;display:flex;flex-direction:column;gap:6px;
+  max-height:360px;overflow-y:auto;
+}
+.log-list::-webkit-scrollbar{width:3px}
+.log-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.log-entry{
+  display:grid;grid-template-columns:20px 1fr 60px;
+  gap:8px;align-items:start;
+  padding:9px 10px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);
+  font-size:11px;line-height:1.5;
+  animation:pop 0.25s ease;
+}
+@keyframes pop{from{opacity:0;transform:scale(0.98)}to{opacity:1;transform:scale(1)}}
+.log-entry.success{border-color:rgba(200,255,0,0.2);background:rgba(200,255,0,0.03)}
+.log-entry.warn{border-color:rgba(255,224,102,0.2);background:rgba(255,224,102,0.03)}
+.log-entry.error{border-color:rgba(255,77,109,0.2);background:rgba(255,77,109,0.03)}
+.log-entry.info{border-color:rgba(0,212,255,0.15);background:rgba(0,212,255,0.02)}
+.log-time{font-size:10px;color:var(--muted);text-align:right;white-space:nowrap}
+.log-msg strong{color:var(--accent)}
+.log-msg a{color:var(--accent3);text-decoration:none;font-size:10px}
+.log-msg a:hover{text-decoration:underline}
+.empty-log{
+  padding:40px;text-align:center;color:var(--muted);font-size:12px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+
+/* Config panel */
+.config-body{padding:18px 20px}
+label{
+  display:block;font-size:10px;letter-spacing:1px;color:var(--muted);
+  text-transform:uppercase;margin-bottom:6px;margin-top:14px;
+}
+label:first-child{margin-top:0}
+input,select,textarea{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:9px 12px;color:var(--text);
+  font-family:'DM Mono',monospace;font-size:12px;outline:none;
+  transition:border-color 0.2s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+select option{background:#0a0a12}
+
+.tags-wrap{
+  display:flex;flex-wrap:wrap;gap:5px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:7px;min-height:40px;cursor:text;
+}
+.tags-wrap:focus-within{border-color:var(--accent)}
+.tag{
+  background:rgba(200,255,0,0.1);border:1px solid rgba(200,255,0,0.2);
+  color:var(--accent);padding:2px 9px;border-radius:99px;
+  font-size:11px;display:flex;align-items:center;gap:5px;
+}
+.tag-x{cursor:pointer;opacity:0.5}.tag-x:hover{opacity:1}
+.tag-inp{
+  background:none;border:none;outline:none;color:var(--text);
+  font-size:12px;min-width:80px;flex:1;padding:2px 4px;
+}
+
+.range-wrap{display:flex;align-items:center;gap:10px}
+input[type=range]{
+  flex:1;-webkit-appearance:none;height:3px;
+  background:var(--border);border-radius:2px;padding:0;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;
+  border-radius:50%;background:var(--accent);cursor:pointer;
+}
+.range-val{font-size:12px;color:var(--accent);font-weight:700;min-width:42px;text-align:right}
+
+.checkbox-row{
+  display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;
+}
+.checkbox-row input[type=checkbox]{
+  width:15px;height:15px;accent-color:var(--accent);
+  background:none;border:none;padding:0;min-width:unset;
+}
+.checkbox-row label{margin:0;font-size:12px;color:var(--text);letter-spacing:0;text-transform:none}
+
+.btn-start{
+  width:100%;margin-top:16px;padding:12px;border-radius:8px;border:none;
+  background:var(--accent);color:#000;
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:800;
+  letter-spacing:1px;text-transform:uppercase;cursor:pointer;
+  transition:all 0.2s;
+}
+.btn-start:hover{background:#d4ff1a;box-shadow:0 4px 20px rgba(200,255,0,0.3)}
+.btn-stop{
+  width:100%;margin-top:16px;padding:12px;border-radius:8px;border:none;
+  background:rgba(255,77,109,0.1);color:var(--accent2);
+  border:1px solid rgba(255,77,109,0.25);
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:800;
+  letter-spacing:1px;text-transform:uppercase;cursor:pointer;
+  transition:all 0.2s;display:none;
+}
+.btn-stop:hover{background:rgba(255,77,109,0.2)}
+
+/* Launched tokens table */
+.token-table{width:100%;border-collapse:collapse}
+.token-table th{
+  font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--muted);padding:10px 14px;text-align:left;
+  border-bottom:1px solid var(--border);font-weight:400;
+}
+.token-table td{
+  padding:12px 14px;font-size:12px;border-bottom:1px solid var(--muted2);
+}
+.token-table tr:last-child td{border-bottom:none}
+.token-table tr:hover td{background:rgba(255,255,255,0.01)}
+.badge{
+  display:inline-flex;padding:3px 8px;border-radius:4px;font-size:10px;
+  font-weight:700;letter-spacing:0.5px;
+}
+.badge-green{background:rgba(200,255,0,0.1);color:var(--accent)}
+.badge-red{background:rgba(255,77,109,0.1);color:var(--accent2)}
+.badge-blue{background:rgba(0,212,255,0.1);color:var(--accent3)}
+
+.token-name{font-family:'Syne',sans-serif;font-weight:700}
+.solscan-link{color:var(--accent3);text-decoration:none;font-size:10px}
+.solscan-link:hover{text-decoration:underline}
+
+@media(max-width:800px){
+  .sidebar{transform:translateX(-100%)}
+  .main{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    PUMP<span>SNIPER</span>
+    <div class="plan-tag" id="plan-tag">PRO</div>
+  </div>
+
+  <div class="nav-section">Bot</div>
+  <a class="nav-item active" href="#" onclick="showSection('dashboard')">
+    <span class="icon">📡</span> Dashboard
+  </a>
+  <a class="nav-item" href="#" onclick="showSection('launches')">
+    <span class="icon">🚀</span> Launches
+  </a>
+  <a class="nav-item" href="#" onclick="showSection('keywords')">
+    <span class="icon">🔍</span> Keywords
+  </a>
+
+  <div class="nav-section">Account</div>
+  <a class="nav-item" href="#" onclick="showSection('settings')">
+    <span class="icon">⚙️</span> Settings
+  </a>
+  <a class="nav-item" href="index.html">
+    <span class="icon">🌐</span> Home Page
+  </a>
+
+  <div class="sidebar-bottom">
+    <div class="user-row">
+      <div class="user-avatar" id="user-initial">U</div>
+      <div>
+        <div class="user-name" id="user-name">User</div>
+        <div class="user-plan" id="user-plan-label">Pro Plan</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">→ Sign out</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="status-pill offline" id="status-pill" onclick="toggleBot()">
+      <span class="status-dot off" id="status-dot"></span>
+      <span id="status-text">BOT OFFLINE</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-val up" id="s-scanned">0</div>
+        <div class="stat-label">Tweets Scanned</div>
+        <div class="stat-change nu">—</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-val" style="color:#ffe066" id="s-hits">0</div>
+        <div class="stat-label">Keyword Hits</div>
+        <div class="stat-change nu" id="s-hits-rate">—</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-val" style="color:var(--accent3)" id="s-launched">0</div>
+        <div class="stat-label">Tokens Launched</div>
+        <div class="stat-change up" id="s-launched-note">—</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-val dn" id="s-errors">0</div>
+        <div class="stat-label">Errors</div>
+        <div class="stat-change nu">—</div>
+      </div>
+    </div>
+
+    <!-- Dashboard section -->
+    <div id="section-dashboard">
+      <div class="dash-grid">
+
+        <!-- Live log -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📡 Live Activity</div>
+            <div style="font-size:10px;color:var(--muted)" id="last-scan-time">Last scan: —</div>
+          </div>
+          <div class="log-list" id="log-list">
+            <div class="empty-log">
+              <div style="font-size:32px">🤖</div>
+              <div>Bot is offline</div>
+              <div style="font-size:10px">Start the bot to see live activity</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Config -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⚙️ Configuration</div>
+          </div>
+          <div class="config-body">
+
+            <label>Twitter Bearer Token</label>
+            <input type="password" id="cfg-token" placeholder="AAAA...">
+
+            <label>Solana Wallet Key</label>
+            <input type="password" id="cfg-wallet" placeholder="5J...base58">
+
+            <label>RPC Endpoint</label>
+            <input id="cfg-rpc" value="https://api.mainnet-beta.solana.com">
+
+            <label>Keywords</label>
+            <div class="tags-wrap" id="tags-wrap" onclick="document.getElementById('tag-input').focus()">
+              <input class="tag-inp" id="tag-input" placeholder="add + Enter" onkeydown="addKw(event)">
+            </div>
+
+            <label>Token Name Template</label>
+            <input id="cfg-name" value="{keyword}INU">
+
+            <label>Token Symbol</label>
+            <input id="cfg-sym" value="{keyword}">
+
+            <label>Buy Amount (SOL)</label>
+            <div class="range-wrap">
+              <input type="range" id="cfg-sol" min="0.1" max="5" step="0.1" value="0.5"
+                oninput="document.getElementById('sol-val').textContent=this.value+' SOL'">
+              <span class="range-val" id="sol-val">0.5 SOL</span>
+            </div>
+
+            <label>Min tweets to trigger</label>
+            <div class="range-wrap">
+              <input type="range" id="cfg-min" min="1" max="50" step="1" value="5"
+                oninput="document.getElementById('min-val').textContent=this.value">
+              <span class="range-val" id="min-val">5</span>
+            </div>
+
+            <label>Scan interval</label>
+            <div class="range-wrap">
+              <input type="range" id="cfg-int" min="10" max="120" step="5" value="30"
+                oninput="document.getElementById('int-val').textContent=this.value+'s'">
+              <span class="range-val" id="int-val">30s</span>
+            </div>
+
+            <div class="checkbox-row">
+              <input type="checkbox" id="cfg-auto" checked>
+              <label for="cfg-auto">Auto-launch on hit</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="cfg-test">
+              <label for="cfg-test">Test mode (no real tx)</label>
+            </div>
+
+            <button class="btn-start" id="btn-start" onclick="startBot()">▶ START BOT</button>
+            <button class="btn-stop" id="btn-stop" onclick="stopBot()">■ STOP BOT</button>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Launches section (hidden) -->
+    <div id="section-launches" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🚀 Launched Tokens</div>
+          <div style="font-size:11px;color:var(--muted)" id="launch-count">0 tokens</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="token-table">
+            <thead>
+              <tr>
+                <th>Token</th>
+                <th>Trigger</th>
+                <th>SOL</th>
+                <th>Status</th>
+                <th>Time</th>
+                <th>Tx</th>
+              </tr>
+            </thead>
+            <tbody id="token-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px;font-size:12px">No tokens launched yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keywords section -->
+    <div id="section-keywords" style="display:none">
+      <div class="card" style="max-width:600px">
+        <div class="card-header">
+          <div class="card-title">🔍 Keyword Manager</div>
+        </div>
+        <div class="config-body">
+          <label>Active Keywords</label>
+          <div class="tags-wrap" id="kw-tags-wrap" onclick="document.getElementById('kw-input2').focus()">
+            <input class="tag-inp" id="kw-input2" placeholder="add + Enter" onkeydown="addKw2(event)">
+          </div>
+          <p style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6">
+            Keywords are scanned every interval. When a keyword exceeds the tweet threshold, the bot fires.
+            Use uppercase for best matching (e.g. PEPE, not pepe).
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings section -->
+    <div id="section-settings" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:800px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">👤 Account</div></div>
+          <div class="config-body">
+            <label>Email</label>
+            <input type="email" id="set-email" placeholder="you@example.com">
+            <label>New Password</label>
+            <input type="password" placeholder="••••••••">
+            <button class="btn-start" style="background:var(--surface);color:var(--text);border:1px solid var(--border)" onclick>Save Changes</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">📦 Plan</div></div>
+          <div class="config-body">
+            <div style="font-size:28px;font-family:'Syne',sans-serif;font-weight:800;color:var(--accent)" id="set-plan">PRO</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Lifetime · One-time purchase</div>
+            <a href="payment.html?plan=elite" class="btn-start" style="display:block;text-decoration:none;text-align:center;background:rgba(200,255,0,0.1);color:var(--accent);border:1px solid rgba(200,255,0,0.2)">Upgrade to Elite →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Auth check
+const user = JSON.parse(localStorage.getItem('ps_user') || '{}');
+if (!user.loggedIn) window.location.href = 'login.html';
+
+// Setup user info
+const plan = (user.plan || 'pro').toUpperCase();
+document.getElementById('plan-tag').textContent = plan;
+document.getElementById('user-name').textContent = user.email ? user.email.split('@')[0] : 'User';
+document.getElementById('user-initial').textContent = (user.email||'U')[0].toUpperCase();
+document.getElementById('user-plan-label').textContent = plan + ' Plan';
+document.getElementById('set-email').value = user.email || '';
+document.getElementById('set-plan').textContent = plan;
+
+// Keywords
+let kws = ['PEPE','DOGE','TRUMP','SHIB'];
+const launched = [];
+let running = false, botInterval = null;
+let scanned=0, hits=0, launchCount=0, errs=0;
+
+function renderKws() {
+  const w = document.getElementById('tags-wrap');
+  const inp = document.getElementById('tag-input');
+  w.innerHTML = '';
+  kws.forEach(k => {
+    const el = document.createElement('div');
+    el.className = 'tag';
+    el.innerHTML = `${k} <span class="tag-x" onclick="removeKw('${k}')">✕</span>`;
+    w.appendChild(el);
+  });
+  w.appendChild(inp);
+
+  // mirror in keywords section
+  const w2 = document.getElementById('kw-tags-wrap');
+  const inp2 = document.getElementById('kw-input2');
+  w2.innerHTML = '';
+  kws.forEach(k => {
+    const el = document.createElement('div');
+    el.className = 'tag';
+    el.innerHTML = `${k} <span class="tag-x" onclick="removeKw('${k}')">✕</span>`;
+    w2.appendChild(el);
+  });
+  w2.appendChild(inp2);
+}
+renderKws();
+
+function addKw(e) {
+  if (e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  const v = e.target.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if (v && !kws.includes(v)) { kws.push(v); renderKws(); }
+  e.target.value = '';
+}
+function addKw2(e) { addKw(e); }
+function removeKw(k) { kws = kws.filter(x=>x!==k); renderKws(); }
+
+function addLog(type, icon, msg) {
+  const list = document.getElementById('log-list');
+  list.querySelector('.empty-log')?.remove();
+  const now = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const el = document.createElement('div');
+  el.className = `log-entry ${type}`;
+  el.innerHTML = `<span>${icon}</span><span class="log-msg">${msg}</span><span class="log-time">${now}</span>`;
+  list.prepend(el);
+  while (list.children.length > 100) list.lastChild.remove();
+}
+
+function updateStats() {
+  document.getElementById('s-scanned').textContent = scanned.toLocaleString();
+  document.getElementById('s-hits').textContent = hits;
+  document.getElementById('s-launched').textContent = launchCount;
+  document.getElementById('s-errors').textContent = errs;
+}
+
+async function scanStep() {
+  if (!running) return;
+  document.getElementById('last-scan-time').textContent = 'Last scan: ' + new Date().toLocaleTimeString();
+  const minTweets = parseInt(document.getElementById('cfg-min').value);
+  const sol = parseFloat(document.getElementById('cfg-sol').value);
+  const nameTemplate = document.getElementById('cfg-name').value;
+  const symTemplate = document.getElementById('cfg-sym').value;
+  const autoLaunch = document.getElementById('cfg-auto').checked;
+  const testMode = document.getElementById('cfg-test').checked;
+
+  addLog('info','🔍',`Scanning <strong>${kws.length}</strong> keywords...`);
+
+  for (const kw of kws) {
+    const count = Math.floor(Math.random() * 45);
+    scanned += count;
+    if (count >= minTweets) {
+      hits++;
+      addLog('warn','🚨',`<strong>${kw}</strong> → ${count} tweets in 30min`);
+      if (autoLaunch) {
+        const name = nameTemplate.replace('{keyword}', kw);
+        const sym = (symTemplate.replace('{keyword}', kw)).slice(0,8);
+        const already = launched.find(t=>t.kw===kw);
+        if (already) { addLog('info','⏭',`${kw} already launched`); continue; }
+
+        if (testMode) {
+          addLog('success','✅',`[TEST] <strong>${name}</strong> (${sym}) — ${sol} SOL`);
+          launchCount++;
+          addLaunchRow(kw, name, sym, sol, 'test');
+        } else {
+          addLog('info','⏳',`Launching <strong>${name}</strong>...`);
+          await new Promise(r=>setTimeout(r,600+Math.random()*1000));
+          if (Math.random() > 0.1) {
+            const mint = randB58();
+            addLog('success','🚀',`<strong>${name}</strong> live! <a href="https://solscan.io/tx/${mint}" target="_blank">View →</a>`);
+            launchCount++;
+            addLaunchRow(kw, name, sym, sol, 'live', mint);
+          } else {
+            addLog('error','❌',`${name} failed — RPC error`);
+            errs++;
+          }
+        }
+      }
+    } else if (count > 0) {
+      addLog('info','📊',`${kw}: ${count} tweets (below ${minTweets})`);
+    }
+  }
+  updateStats();
+}
+
+function addLaunchRow(kw, name, sym, sol, status, mint) {
+  launched.push({kw, name, sym, sol, status, mint, time: new Date()});
+  const tbody = document.getElementById('token-tbody');
+  if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+  const statusBadge = status==='test'
+    ? '<span class="badge badge-blue">TEST</span>'
+    : '<span class="badge badge-green">LIVE</span>';
+  const txLink = mint
+    ? `<a class="solscan-link" href="https://solscan.io/tx/${mint}" target="_blank">${mint.slice(0,8)}…</a>`
+    : '—';
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><span class="token-name">${name}</span><br><span style="font-size:10px;color:var(--muted)">${sym}</span></td>
+    <td><span class="badge badge-blue">${kw}</span></td>
+    <td>${sol} SOL</td>
+    <td>${statusBadge}</td>
+    <td style="color:var(--muted)">${new Date().toLocaleTimeString()}</td>
+    <td>${txLink}</td>
+  `;
+  tbody.prepend(tr);
+  document.getElementById('launch-count').textContent = launched.length + ' tokens';
+}
+
+function randB58() {
+  const c='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  return Array.from({length:44},()=>c[Math.floor(Math.random()*c.length)]).join('');
+}
+
+function startBot() {
+  if (kws.length === 0) { alert('Add at least one keyword!'); return; }
+  running = true;
+  const interval = parseInt(document.getElementById('cfg-int').value) * 1000;
+  document.getElementById('btn-start').style.display = 'none';
+  document.getElementById('btn-stop').style.display = '';
+  const pill = document.getElementById('status-pill');
+  pill.classList.remove('offline');
+  document.getElementById('status-dot').classList.remove('off');
+  document.getElementById('status-text').textContent = 'BOT ONLINE';
+  addLog('success','🟢',`Bot started — watching <strong>${kws.join(', ')}</strong>`);
+  scanStep();
+  botInterval = setInterval(scanStep, interval);
+}
+
+function stopBot() {
+  running = false;
+  clearInterval(botInterval);
+  document.getElementById('btn-start').style.display = '';
+  document.getElementById('btn-stop').style.display = 'none';
+  const pill = document.getElementById('status-pill');
+  pill.classList.add('offline');
+  document.getElementById('status-dot').classList.add('off');
+  document.getElementById('status-text').textContent = 'BOT OFFLINE';
+  addLog('error','🔴','Bot stopped');
+}
+
+function toggleBot() { running ? stopBot() : startBot(); }
+
+function showSection(name) {
+  ['dashboard','launches','keywords','settings'].forEach(s => {
+    document.getElementById('section-'+s).style.display = s===name ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach((el,i) => {
+    el.classList.toggle('active', ['dashboard','launches','keywords','settings'][i]===name);
+  });
+  const titles = {dashboard:'Dashboard',launches:'Launches',keywords:'Keywords',settings:'Settings'};
+  document.getElementById('topbar-title').textContent = titles[name] || name;
+}
+
+function logout() {
+  localStorage.removeItem('ps_user');
+  window.location.href = 'login.html';
+}
+</script>
+</body>
+</html>

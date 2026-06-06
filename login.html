@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PumpSniper — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#03030a;--surface:#08080f;--card:#0c0c15;--border:#16162a;--accent:#c8ff00;--red:#ff4d6d;--text:#f0f0ff;--muted:#4a4a6a}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,255,0,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(200,255,0,0.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none}
+.orb1{width:400px;height:400px;background:rgba(200,255,0,0.05);top:-100px;right:-100px}
+.orb2{width:300px;height:300px;background:rgba(255,77,109,0.04);bottom:-80px;left:-80px}
+.panel{width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:40px;position:relative;z-index:1;animation:up 0.5s ease}
+@keyframes up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.back{position:absolute;top:18px;left:18px;font-size:11px;color:var(--muted);text-decoration:none;transition:color 0.2s}
+.back:hover{color:var(--text)}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;text-align:center;margin-bottom:28px}
+.logo span{color:var(--accent)}
+.tabs{display:flex;background:var(--surface);border-radius:10px;padding:4px;margin-bottom:24px}
+.tab{flex:1;text-align:center;padding:9px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);transition:all 0.2s}
+.tab.active{background:var(--card);color:var(--accent);border:1px solid rgba(200,255,0,0.2)}
+.form{display:none}.form.active{display:block}
+label{display:block;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;margin-top:16px}
+label:first-of-type{margin-top:0}
+input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none;transition:border-color 0.2s}
+input:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted)}
+.plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.plan-opt{border:1px solid var(--border);border-radius:8px;padding:12px 6px;text-align:center;cursor:pointer;transition:all 0.2s}
+.plan-opt:hover{border-color:rgba(200,255,0,0.3)}
+.plan-opt.sel{border-color:var(--accent);background:rgba(200,255,0,0.06)}
+.plan-name{font-family:'Syne',sans-serif;font-size:10px;font-weight:800;margin-bottom:3px}
+.plan-price{font-size:13px;color:var(--accent);font-weight:700}
+.btn{width:100%;margin-top:20px;padding:13px;border-radius:9px;border:none;background:var(--accent);color:#000;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
+.btn:hover{background:#d4ff1a;transform:translateY(-1px)}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.msg{border-radius:8px;padding:10px 13px;font-size:11px;margin-top:12px;display:none;line-height:1.5}
+.msg.err{background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);color:var(--red)}
+.msg.ok{background:rgba(200,255,0,0.08);border:1px solid rgba(200,255,0,0.25);color:var(--accent)}
+.forgot{text-align:center;margin-top:14px;font-size:11px;color:var(--muted)}
+.forgot a{color:var(--accent);text-decoration:none}
+.terms{font-size:10px;color:var(--muted);text-align:center;margin-top:16px;line-height:1.6}
+.terms a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="panel">
+  <a href="index.html" class="back">← Back</a>
+  <div class="logo">PUMP<span>SNIPER</span></div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('login')">Login</div>
+    <div class="tab" onclick="switchTab('register')">Register</div>
+  </div>
+  <div class="form active" id="form-login">
+    <label>Email</label>
+    <input type="email" id="l-email" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="l-pass" placeholder="••••••••">
+    <div class="msg err" id="l-err"></div>
+    <button class="btn" id="l-btn" onclick="doLogin()">Login →</button>
+    <div class="forgot"><a href="#" onclick="doForgot()">Forgot password?</a></div>
+  </div>
+  <div class="form" id="form-register">
+    <label>Select Plan</label>
+    <div class="plan-grid">
+      <div class="plan-opt" onclick="setPlan(this,'starter')"><div class="plan-name">STARTER</div><div class="plan-price">$49</div></div>
+      <div class="plan-opt sel" onclick="setPlan(this,'pro')"><div class="plan-name">PRO</div><div class="plan-price">$149</div></div>
+      <div class="plan-opt" onclick="setPlan(this,'elite')"><div class="plan-name">ELITE</div><div class="plan-price">$349</div></div>
+    </div>
+    <label>Email</label>
+    <input type="email" id="r-email" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="r-pass" placeholder="min 8 characters">
+    <div class="msg err" id="r-err"></div>
+    <div class="msg ok" id="r-ok"></div>
+    <button class="btn" id="r-btn" onclick="doRegister()">Create Account →</button>
+    <div class="terms">By registering you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</div>
+  </div>
+</div>
+<script>
+const SUPABASE_URL = 'https://zplvcxhbqstbnsamavgf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_LY7h3b6KX2pJd6KMV0iUvw_64Hepyi5';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+let selectedPlan = 'pro';
+function switchTab(name){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['login','register'][i]===name));document.querySelectorAll('.form').forEach(f=>f.classList.remove('active'));document.getElementById('form-'+name).classList.add('active')}
+function setPlan(el,plan){document.querySelectorAll('.plan-opt').forEach(p=>p.classList.remove('sel'));el.classList.add('sel');selectedPlan=plan}
+async function doLogin(){
+  const email=document.getElementById('l-email').value.trim();
+  const pass=document.getElementById('l-pass').value;
+  const err=document.getElementById('l-err');
+  const btn=document.getElementById('l-btn');
+  if(!email||!pass){showMsg(err,'Please fill all fields.');return}
+  btn.disabled=true;btn.textContent='Logging in...';
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){showMsg(err,error.message);btn.disabled=false;btn.textContent='Login →';return}
+  const{data:user}=await sb.from('users').select('*').eq('email',email).single();
+  if(user&&user.paid){localStorage.setItem('ps_user',JSON.stringify({email,plan:user.plan,paid:true}));window.location.href='dashboard.html'}
+  else{localStorage.setItem('ps_user',JSON.stringify({email,plan:user?.plan||'pro',paid:false}));window.location.href='payment.html?plan='+(user?.plan||'pro')}
+}
+async function doRegister(){
+  const email=document.getElementById('r-email').value.trim();
+  const pass=document.getElementById('r-pass').value;
+  const err=document.getElementById('r-err');
+  const ok=document.getElementById('r-ok');
+  const btn=document.getElementById('r-btn');
+  if(!email||!pass||pass.length<8){showMsg(err,'Email and password (min 8 chars) required.');return}
+  btn.disabled=true;btn.textContent='Creating account...';
+  const{data,error}=await sb.auth.signUp({email,password:pass});
+  if(error){showMsg(err,error.message);btn.disabled=false;btn.textContent='Create Account →';return}
+  await sb.from('users').insert({email,plan:selectedPlan,paid:false});
+  showMsg(ok,'✓ Account created! Redirecting...');
+  localStorage.setItem('ps_user',JSON.stringify({email,plan:selectedPlan,paid:false}));
+  setTimeout(()=>window.location.href='payment.html?plan='+selectedPlan,1500);
+}
+async function doForgot(){
+  const email=document.getElementById('l-email').value.trim();
+  if(!email){showMsg(document.getElementById('l-err'),'Enter your email first.');return}
+  await sb.auth.resetPasswordForEmail(email);
+  const el=document.getElementById('l-err');
+  el.className='msg ok';showMsg(el,'✓ Reset link sent to '+email);
+}
+function showMsg(el,msg){el.textContent=msg;el.style.display='block'}
+</script>
+</body>
+</html>
